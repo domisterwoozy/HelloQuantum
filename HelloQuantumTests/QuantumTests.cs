@@ -406,39 +406,36 @@ namespace HelloQuantumTests
             {
                 resN[i].ShouldBe(amps[i]);
             }
-        }
+        }        
 
         [Fact]
-        public void PhaseTest()
+        public void PhaseStartSimpleTest()
         {
-            // half a half b
-            var eigenvector = new Qubit(ComplexExt.OneOverRootTwo, -ComplexExt.OneOverRootTwo);
 
-            var phaseTest = PhaseEstimator.GatePhaseEstimator(Gates.X, 2);
+            var eigenvector = new Qubit(0, 1);
+            var phaseTest = PhaseEstimator.GatePhaseEstimatorStart(Gates.S, 1);
             var res = phaseTest.Transform(new MultiQubit(new[]
             {
                 eigenvector,
-                Qubit.ClassicZero, Qubit.ClassicZero, // t register set to zero
+                Qubit.ClassicZero // t register set to zero
             }));
 
             // sanity check
             res.TwoNorm().Should().BeApproximately(1, ComplexAssertionExtensions.Precision);
 
-
-            // should be teh same 50/50
-            res.TrueChance(0).Should().BeApproximately(0.5, ComplexAssertionExtensions.Precision);
-
-            // eignenvalue is 1 -> 1 = e^(2pitheta) -> theta = 0
-            res.TrueChance(1).Should().BeApproximately(0, ComplexAssertionExtensions.Precision);
-            res.TrueChance(2).Should().BeApproximately(0, ComplexAssertionExtensions.Precision);
+            var resArr = res.ToArray();
+            resArr[0].ShouldBe(0);
+            resArr[1].ShouldBe(0);
+            resArr[2].ShouldBe(ComplexExt.OneOverRootTwo);
+            resArr[3].ShouldBe(Complex.ImaginaryOne * ComplexExt.OneOverRootTwo);
         }
 
         [Fact]
-        public void PhaseTestTwo()
+        public void PhaseStartTest()
         {
 
             var eigenvector = new Qubit(0, 1);
-            var phaseTest = PhaseEstimator.GatePhaseEstimator(Gates.S, 2);
+            var phaseTest = PhaseEstimator.GatePhaseEstimatorStart(Gates.S, 2);
             var res = phaseTest.Transform(new MultiQubit(new[]
             {
                 eigenvector,
@@ -446,17 +443,88 @@ namespace HelloQuantumTests
             }));
 
             // sanity check
-            //res.TwoNorm().Should().BeApproximately(1, ComplexAssertionExtensions.Precision);
+            res.TwoNorm().Should().BeApproximately(1, ComplexAssertionExtensions.Precision);
 
-            // unchanged, all true
-            //res.TrueChance(0).Should().BeApproximately(1, ComplexAssertionExtensions.Precision);
+            var resArr = res.ToArray();
+            resArr[0].ShouldBe(0);
+            resArr[1].ShouldBe(0);
+            resArr[2].ShouldBe(0);
+            resArr[3].ShouldBe(0);
+            resArr[4].ShouldBe(0.5);
+            resArr[5].ShouldBe(-0.5);
+            resArr[6].ShouldBe(0.5 * Complex.ImaginaryOne);
+            resArr[7].ShouldBe(-0.5 * Complex.ImaginaryOne);
+        }
 
-            // eignenvalue is i -> i = e^(2pi*phi) -> phi = 1/4
-            // least significant bit to most significatn bit
-            double bitOne = res.TrueChance(1); // should be 0 (1/8)
-            double bitTwo = res.TrueChance(2); // should be 1 (1/4)
-           // double bitThree = res.TrueChance(3); // should be 0 (1/2)
-            ;
+        [Fact]
+        public void PhaseTestSimple()
+        {
+            var eigenvector = new Qubit(0, 1);
+            var phaseTest = PhaseEstimator.GatePhaseEstimator(Gates.S, 1);
+            var res = phaseTest.Transform(new MultiQubit(new[]
+            {
+                eigenvector,
+                Qubit.ClassicZero // t register set to zero
+            }));
+
+            // sanity check
+            res.TwoNorm().Should().BeApproximately(1, ComplexAssertionExtensions.Precision);
+
+            var resArr = res.ToArray();
+            resArr[0].ShouldBe(0);
+            resArr[1].ShouldBe(0);
+            resArr[2].ShouldBe(new Complex(0.5, 0.5));
+            resArr[3].ShouldBe(new Complex(0.5, -0.5));
+        }
+
+        [Fact]
+        public void PhaseTest()
+        {
+            var eigenvector = new Qubit(0, 1);
+            var phaseTest = PhaseEstimator.GatePhaseEstimator(Gates.S, 4);
+            var res = phaseTest.Transform(new MultiQubit(new[]
+            {
+                eigenvector,
+                // t register set to zero
+                Qubit.ClassicZero, Qubit.ClassicZero, Qubit.ClassicZero, Qubit.ClassicZero
+            }));
+
+            // sanity check
+            res.TwoNorm().Should().BeApproximately(1, ComplexAssertionExtensions.Precision);
+
+            // should be the same eigenvector
+            res.TrueChance(0).Should().BeApproximately(1, ComplexAssertionExtensions.Precision);
+
+            // eignenvalue is i -> i = e^(2pitheta) -> theta = 1/4
+            res.TrueChance(4).Should().BeApproximately(0, ComplexAssertionExtensions.Precision); // 1/16 bit
+            res.TrueChance(3).Should().BeApproximately(0, ComplexAssertionExtensions.Precision); // 1/8 bit
+            res.TrueChance(2).Should().BeApproximately(1, ComplexAssertionExtensions.Precision); // 1/4 bit
+            res.TrueChance(1).Should().BeApproximately(0, ComplexAssertionExtensions.Precision); // 1/2 bit
+        }
+
+        [Fact]
+        public void PhaseTestTwo()
+        {
+            var eigenvector = new Qubit(ComplexExt.OneOverRootTwo, -ComplexExt.OneOverRootTwo);
+            var phaseTest = PhaseEstimator.GatePhaseEstimator(Gates.X, 4);
+            var res = phaseTest.Transform(new MultiQubit(new[]
+            {
+                eigenvector,
+                // t register set to zero
+                Qubit.ClassicZero, Qubit.ClassicZero, Qubit.ClassicZero, Qubit.ClassicZero
+            }));
+
+            // sanity check
+            res.TwoNorm().Should().BeApproximately(1, ComplexAssertionExtensions.Precision);
+
+            // should be the same eigenvector
+            res.TrueChance(0).Should().BeApproximately(0.5, ComplexAssertionExtensions.Precision);
+
+            // eignenvalue is -1 -> i = e^(2pitheta) -> theta = 1/2
+            res.TrueChance(4).Should().BeApproximately(0, ComplexAssertionExtensions.Precision); // 1/16 bit
+            res.TrueChance(3).Should().BeApproximately(0, ComplexAssertionExtensions.Precision); // 1/8 bit
+            res.TrueChance(2).Should().BeApproximately(0, ComplexAssertionExtensions.Precision); // 1/4 bit
+            res.TrueChance(1).Should().BeApproximately(1, ComplexAssertionExtensions.Precision); // 1/2 bit
         }
     }
 }

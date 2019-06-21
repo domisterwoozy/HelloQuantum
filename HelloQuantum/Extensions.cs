@@ -27,12 +27,12 @@ namespace HelloQuantum
 
         public static double TwoNorm(this IEnumerable<Complex> nums)
         {
-            Complex total = 0;
+            double total = 0;
             foreach (Complex num in nums)
             {
-                total += num * num;
+                total += num.Magnitude * num.Magnitude;
             }
-            return total.Magnitude;
+            return total;
         }
 
         public static Complex Conjugate(this Complex c) => new Complex(c.Real, -c.Imaginary);

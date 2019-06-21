@@ -65,7 +65,7 @@ namespace HelloQuantum
             return FourierTransform(n).Transform(qubits).ToArray();
         }
 
-        public static IUnitaryTransform FourierTransform(int numQubits)
+        public static IUnitaryTransform FourierTransform(int numQubits, bool scaleAndSwap = true)
         {
             var fourier = new CompositeTransform(new IdentityTransform(numQubits));
             for (int bitIndex = 0; bitIndex < numQubits; bitIndex++)
@@ -83,21 +83,24 @@ namespace HelloQuantum
                 }
             }
 
-            // scale time
-            Gate scaleGate = Gates.I.Scale(ComplexExt.OneOverRootTwo);
-            for (int bitIndex = 0; bitIndex < numQubits; bitIndex++)
+            if (scaleAndSwap)
             {
-                fourier = fourier.Apply(scaleGate, bitIndex);
-            }
+                // scale time
+                Gate scaleGate = Gates.I.Scale(ComplexExt.OneOverRootTwo);
+                for (int bitIndex = 0; bitIndex < numQubits; bitIndex++)
+                {
+                    fourier = fourier.Apply(scaleGate, bitIndex);
+                }
 
-            // swap time
-            // i think we just swap everything?
-            for (int bitIndex = 0; bitIndex < numQubits / 2; bitIndex++)
-            {
-                fourier = fourier.ApplyControlled(Gates.Not, bitIndex, numQubits - bitIndex - 1);
-                fourier = fourier.ApplyControlled(Gates.Not, numQubits - bitIndex - 1, bitIndex);
-                fourier = fourier.ApplyControlled(Gates.Not, bitIndex, numQubits - bitIndex - 1);
-            }
+                // swap time
+                // i think we just swap everything?
+                for (int bitIndex = 0; bitIndex < numQubits / 2; bitIndex++)
+                {
+                    fourier = fourier.ApplyControlled(Gates.Not, bitIndex, numQubits - bitIndex - 1);
+                    fourier = fourier.ApplyControlled(Gates.Not, numQubits - bitIndex - 1, bitIndex);
+                    fourier = fourier.ApplyControlled(Gates.Not, bitIndex, numQubits - bitIndex - 1);
+                }
+            }         
 
             return fourier;
         }

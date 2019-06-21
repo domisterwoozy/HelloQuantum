@@ -9,11 +9,28 @@ namespace HelloQuantum
     {
         /// <summary>
         /// First u.NumQubits qubits are the eigenvector, the rest is t register in
-        /// significance ascending order
+        /// significance descending order
         /// </summary>
-        public static IUnitaryTransform GatePhaseEstimator(Gate u, int t)
+        public static CompositeTransform GatePhaseEstimator(Gate u, int t)
         {
             long totalDimension = u.Dimension * (long)Math.Pow(2, t); // dimension of tensor product multiplies
+            var phaseEstimator = GatePhaseEstimatorStart(u, t);
+
+            // finally apply inverse qft to the t register
+            return phaseEstimator.Apply(
+                new PartialTransform(
+                    totalDimension,
+                    // phase trans assumes fourier does not do the swap and scales
+                    Fourier.FourierTransform(t, false).Inverse(),
+                    Enumerable.Range(u.NumQubits, t).ToArray()));
+        }
+
+        /// <summary>
+        /// First u.NumQubits qubits are the eigenvector, the rest is t register in
+        /// significance descending order
+        /// </summary>
+        public static CompositeTransform GatePhaseEstimatorStart(Gate u, int t)
+        {
             var phaseEstimator = new CompositeTransform(new IdentityTransform(u.NumQubits + t));
             foreach (int ti in Enumerable.Range(0, t))
             {
@@ -26,12 +43,7 @@ namespace HelloQuantum
                 }
             }
 
-            // finally apply inverse qft to the t register
-            return phaseEstimator.Apply(
-                new PartialTransform(
-                    totalDimension,
-                    Fourier.FourierTransform(t).Inverse(),
-                    Enumerable.Range(u.NumQubits, t).ToArray()));
+            return phaseEstimator;
         }
 
         public static IUnitaryTransform GatePhaseEstimator(IUnitaryTransform u, int t)
