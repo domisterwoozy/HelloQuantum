@@ -49,5 +49,38 @@ namespace HelloQuantum
                 yield return i;
             }
         }
+
+        public static long FromBits(bool[] bits)
+        {
+            long total = 0;
+            int k = 0;
+            foreach (var item in bits)
+            {
+                k++;
+                if (!item) continue;
+                total += (long)Math.Pow(2, bits.Length - k);
+            }
+            return total;
+        }
+
+        public static IEnumerable<bool> ToBits(this long n)
+        {
+            if (n < 2)
+            {
+                return new[] { n == 1 };
+            }
+
+            var divisor = n / 2;
+            var remainder = n % 2;
+
+            return ToBits(divisor).Concat(new[] { remainder == 1 });
+        }
+
+        public static bool[] ToBitsPad(this long n, long padLength)
+        {
+            bool[] bits = n.ToBits().ToArray();
+            // need to pad with zeros to get the correct number of labels
+            return new bool[padLength - bits.Length].Concat(bits).ToArray();
+        }
     }
 }

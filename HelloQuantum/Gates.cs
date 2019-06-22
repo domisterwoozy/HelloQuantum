@@ -1,4 +1,6 @@
-﻿using System;
+﻿using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Complex;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -21,7 +23,18 @@ namespace HelloQuantum
         IQuantumState Transform(IQuantumState input);
         IUnitaryTransform Inverse();
 
+        /// <summary>
+        /// The number of primitive quantum gates it takes to represent this transformation.
+        /// </summary>
         int NumGates { get; }
+
+        /// <summary>
+        /// Some transforms have short cuts when repeatadly applying them.
+        /// This allows overriding the default which is just repeated application.
+        /// </summary>
+        IUnitaryTransform Pow(long exponent)
+            => new CompositeTransform(LongExt.Range(0, exponent).Select(exp => this).ToArray());
+        
     }
 
     /// <summary>
@@ -70,7 +83,7 @@ namespace HelloQuantum
 
         public long Dimension => 2 * InnerTransform.Dimension;
         public int NumQubits => 1 + InnerTransform.NumGates;
-        public int NumGates => 1; // i think this is considered a basic gate
+        public int NumGates => InnerTransform.NumGates; // i think this is considered a basic gate
 
         public CTransform(IUnitaryTransform innerTransform)
         {
@@ -154,11 +167,12 @@ namespace HelloQuantum
     {
         public long Dimension { get; }
         public int NumQubits { get; }
+        // this is usually a 'simulation' of multiple smaller gates
         public int NumGates { get; }
 
-        private readonly Complex[,] elements;
+        private readonly Matrix<Complex> matrix;
 
-        public MultiGate(Complex[,] elements)
+        public MultiGate(Complex[,] elements, int numGates)
         {
             if (elements.GetLongLength(0) != elements.GetLongLength(1))
             {
@@ -170,19 +184,9 @@ namespace HelloQuantum
                 throw new ArgumentException("Must be power of 2");
             }
 
-            this.elements = elements;
             Dimension = elements.GetLongLength(0);
-        }
-
-        public static MultiGate Identity(int dim)
-        {
-            long bigN = (long)Math.Pow(2, dim);
-            var eles = new Complex[bigN, bigN];
-            for (long i = 0; i < bigN; i++)
-            {
-                eles[i, i] = 1;
-            }
-            return new MultiGate(eles);
+            matrix = DenseMatrix.OfArray(elements);
+            NumGates = numGates;
         }
 
         public IQuantumState Transform(IQuantumState input)
@@ -192,13 +196,12 @@ namespace HelloQuantum
                 throw new ArgumentException(nameof(input.Dimension));
             }
 
-            throw new NotImplementedException();
+            DenseVector inVec = DenseVector.OfArray(input.ToArray());
+            var res = matrix * inVec;
+            return new MultiQubit(res.ToArray());
         }
 
-        public IUnitaryTransform Inverse()
-        {
-            throw new NotImplementedException();
-        }
+        public IUnitaryTransform Inverse() => new MultiGate(matrix.Inverse().ToArray(), NumGates);
     }
 
     /// <summary>
@@ -300,24 +303,32 @@ namespace HelloQuantum
         public IUnitaryTransform Inverse()
             => new CompositeTransform(transforms.Reverse().Select(t => t.Inverse()).ToArray());
 
-        public CompositeTransform Apply(IUnitaryTransform transform) 
-            => new CompositeTransform(transforms.Add(transform));
+        public CompositeTransform Apply(IUnitaryTransform transform, long exp = 1) 
+            => new CompositeTransform(transforms.Add(transform.Pow(exp)));
 
-        public CompositeTransform Apply(Gate g, int qubitIndex)
-            => new CompositeTransform(transforms.Add(new PartialTransform(Dimension, g, new[] { qubitIndex })));
+        public CompositeTransform Apply(Gate g, int qubitIndex, long exp = 1)
+        {
+            IUnitaryTransform newTrans = new PartialTransform(Dimension, g, new[] { qubitIndex });
+            return new CompositeTransform(transforms.Add(newTrans.Pow(exp)));
+        }
 
-        public CompositeTransform Apply(IUnitaryTransform g, int[] qubitIndexes)
-            => new CompositeTransform(transforms.Add(new PartialTransform(Dimension, g, qubitIndexes)));
+        public CompositeTransform Apply(IUnitaryTransform g, int[] qubitIndexes, long exp = 1)
+        {
+            IUnitaryTransform newTrans = new PartialTransform(Dimension, g, qubitIndexes);
+            return new CompositeTransform(transforms.Add(newTrans.Pow(exp)));
+        }
 
-        public CompositeTransform ApplyControlled(IUnitaryTransform g, int controlIndex, int targetIndex)
-            => ApplyControlled(g, controlIndex, new[] { targetIndex });
+        public CompositeTransform ApplyControlled(IUnitaryTransform g, int controlIndex, int targetIndex, long exp = 1)
+            => ApplyControlled(g, controlIndex, new[] { targetIndex }, exp);
 
-        public CompositeTransform ApplyControlled(IUnitaryTransform g, int controlIndex, int[] targetIndexes)
-            => new CompositeTransform(
-                transforms.Add(new PartialTransform(
+        public CompositeTransform ApplyControlled(IUnitaryTransform g, int controlIndex, int[] targetIndexes, long exp = 1)
+        {
+            IUnitaryTransform newTrans = new PartialTransform(
                     Dimension,
-                    new CTransform(g), 
-                    new[] { controlIndex }.Concat(targetIndexes).ToArray())));
+                    new CTransform(g),
+                    new[] { controlIndex }.Concat(targetIndexes).ToArray());
+            return new CompositeTransform(transforms.Add(newTrans.Pow(exp)));
+        }
     }
 
 }

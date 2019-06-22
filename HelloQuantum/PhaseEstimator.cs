@@ -13,16 +13,14 @@ namespace HelloQuantum
             foreach (int ti in Enumerable.Range(0, t))
             {
                 phaseEstimator = phaseEstimator.Apply(Gates.H, u.NumQubits + ti);
-                // apply you 2^(ti) times
+                // apply u 2^(ti) times
                 long j = (long)Math.Pow(2, ti);
-                for (int num = 0; num < j; num++)
-                {
-                    phaseEstimator = phaseEstimator.ApplyControlled(
-                        u, 
-                        u.NumQubits + ti, 
-                        Enumerable.Range(0, u.NumQubits).ToArray());
-                }
-            }
+                phaseEstimator = phaseEstimator.ApplyControlled(
+                    u, 
+                    u.NumQubits + ti, 
+                    Enumerable.Range(0, u.NumQubits).ToArray(),
+                    j);
+        }
 
             return phaseEstimator;
         }

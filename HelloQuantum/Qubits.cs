@@ -81,40 +81,13 @@ namespace HelloQuantum
                 throw new ArgumentOutOfRangeException("Too many labels");
             }
 
-            long index = 0;
-            int k = 0;
-            foreach (var item in labels)
-            {
-                k++;
-                if (!item) continue;
-                index += (long)Math.Pow(2, labels.Length - k);
-            }
-
-            return new ComputationalBasis(index, labels.Length);
+            return new ComputationalBasis(LongExt.FromBits(labels), labels.Length);
         }
 
         public static implicit operator ComputationalBasis(bool[] labels) => FromLabels(labels);
         public static implicit operator ComputationalBasis(string bitStr) => FromLabels(bitStr.ToBits());
 
-        public bool[] GetLabels()
-        {
-            bool[] bits = ToBinary(AmpIndex).ToArray();
-            // need to pad with zeros to get the correct number of labels
-            return new bool[NumQubits - bits.Length].Concat(bits).ToArray();
-        }
-
-        public static IEnumerable<bool> ToBinary(long n)
-        {
-            if (n < 2)
-            {
-                return new[] { n == 1 };
-            }
-
-            var divisor = n / 2;
-            var remainder = n % 2;
-
-            return ToBinary(divisor).Concat(new[] { remainder == 1 });
-        }
+        public bool[] GetLabels() => AmpIndex.ToBitsPad(NumQubits);
     }
 
     public class MultiQubit : IQuantumState

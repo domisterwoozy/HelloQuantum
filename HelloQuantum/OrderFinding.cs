@@ -1,41 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
 using System.Text;
 
 namespace HelloQuantum
 {
-    /// <summary>
-    /// U|input> = |x*input (mod N)>
-    /// </summary>
-    public class ModMult : IUnitaryTransform
+    public static class NumberTheoryTransforms
     {
-        public long Dimension { get; }
-        public int NumQubits { get; }
-
-        // need to see how much this is. prob depends on number of bits
-        public int NumGates { get; } = 1;
-
-        public long X { get; }
-        public long N { get; }
-
-        public ModMult(long x, long n)
+        /// <summary>
+        /// Takes a (hopefully linear function) from int to int and turns it into
+        /// a complex unitary transform that reproducest he function when input with
+        /// classical bits that represent the integer input.
+        /// </summary>
+        public static IUnitaryTransform FromFunction(Func<long, long> func, int numBits)
         {
-            X = x;
-            N = n;
-
-            NumQubits = (int)Math.Ceiling(Math.Log(n, 2)); // need ceiling to capture N fully
-            Dimension = (long)Math.Pow(2, NumQubits);               
-        }        
-
-        public IQuantumState Transform(IQuantumState input)
-        {
-            // crap this prob needs a matrix
-            throw new NotImplementedException();
+            long dimension = (long)Math.Pow(2, numBits);
+            var elements = new Complex[dimension, dimension];
+            foreach (long i in LongExt.Range(0, dimension))
+            {
+                elements[func(i), i] = 1;
+            }
+            return new MultiGate(elements, (int)Math.Pow(numBits, 3)); // simulated with O(L^3) gates
         }
 
-        public IUnitaryTransform Inverse()
+        /// <summary>
+        /// U|input> = |x^j*input (mod N)>
+        /// </summary>
+        public static IUnitaryTransform ModMult(long x, long n, int j = 1)
         {
-            throw new NotImplementedException();
+            int numBits = (int)Math.Ceiling(Math.Log(n, 2));            
+            return FromFunction(modMult, numBits);
+
+            long modMult(long y) => ((long)Math.Pow(x, j) * y) % n;
         }
     }
 }
