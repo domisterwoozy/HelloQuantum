@@ -41,5 +41,13 @@ namespace HelloQuantum
     public static class LongExt
     {
         public static bool IsPowerTwo(this long num) => (num & num) == num;
+
+        public static IEnumerable<long> Range(long start, long range)
+        {
+            for (long i = start; i < start + range; i++)
+            {
+                yield return i;
+            }
+        }
     }
 }

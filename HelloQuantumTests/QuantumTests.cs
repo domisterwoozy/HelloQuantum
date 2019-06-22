@@ -55,7 +55,7 @@ namespace HelloQuantumTests
             Qubit control = new Qubit(ComplexExt.OneOverRootTwo, ComplexExt.OneOverRootTwo);
             Qubit target = new Qubit(1, 0);
 
-            MultiQubit bell = new CGate(Gates.Not).Transform(control, target);
+            IQuantumState bell = new CTransform(Gates.Not).Transform(new MultiQubit(control, target));
             bell.GetAmplitude("00".ToBits()).ShouldBe(ComplexExt.OneOverRootTwo);
             bell.GetAmplitude("11".ToBits()).ShouldBe(ComplexExt.OneOverRootTwo);
             bell.GetAmplitude("01".ToBits()).ShouldBe(Complex.Zero);
@@ -70,8 +70,8 @@ namespace HelloQuantumTests
         {
             Qubit control = new Qubit(ComplexExt.OneOverRootTwo, ComplexExt.OneOverRootTwo);
             Qubit target = new Qubit(1, 0);
-            MultiQubit bell = new CGate(Gates.Not).Transform(control, target);
-            MultiQubit res = bell.ApplyGate(Gates.H, 0);
+            IQuantumState bell = new CTransform(Gates.Not).Transform(new MultiQubit(control, target));
+            IQuantumState res = new PartialTransform(4, Gates.H, new[] { 0 }).Transform(bell);
 
             res.GetAmplitude("00".ToBits()).ShouldBe(new Complex(1.0 / 2, 0));
             res.GetAmplitude("11".ToBits()).ShouldBe(-new Complex(1.0 / 2, 0));
@@ -84,7 +84,7 @@ namespace HelloQuantumTests
         {
             Qubit control = new Qubit(ComplexExt.OneOverRootTwo, ComplexExt.OneOverRootTwo);
             Qubit target = new Qubit(1, 0);
-            MultiQubit bell = new CGate(Gates.Not).Transform(control, target);
+            IQuantumState bell = new CTransform(Gates.Not).Transform(new MultiQubit(control, target));
 
             bell.TrueChance(0).Should().BeApproximately(0.5, ComplexAssertionExtensions.Precision);
             bell.TrueChance(1).Should().BeApproximately(0.5, ComplexAssertionExtensions.Precision);
@@ -117,16 +117,19 @@ namespace HelloQuantumTests
                 new Complex(-1, 8)
             };
 
-            var res = Fourier.ThreeBit(amps);
-            for (int i = 0; i < amps.Length; i++)
-            {
-                res[i].ShouldBe(expected[i]);
-            }
+            var fourier = Fourier.FourierTransform(3);
+            var inverseFourier = fourier.Inverse();
 
-            var resN = Fourier.NBit(amps);
-            for (int i = 0; i < amps.Length; i++)
+            var resN = inverseFourier.Transform(new MultiQubit(expected)).ToArray();
+            for (int i = 0; i < expected.Length; i++)
             {
-                resN[i].ShouldBe(expected[i]);
+                resN[i].ShouldBe(amps[i]);
+            }
+            
+            var resTwo = fourier.Transform(new MultiQubit(amps)).ToArray();
+            for (int i = 0; i < expected.Length; i++)
+            {
+                resTwo[i].ShouldBe(expected[i]);
             }
         }
 
@@ -149,16 +152,18 @@ namespace HelloQuantumTests
                 new Complex(-2, 1)
             };
 
-            var res = Fourier.TwoBit(amps);
-            for (int i = 0; i < amps.Length; i++)
+            var inverseFourier = Fourier.FourierTransform(2).Inverse();
+            var resN = inverseFourier.Transform(new MultiQubit(expected)).ToArray();
+            for (int i = 0; i < expected.Length; i++)
             {
-                res[i].ShouldBe(expected[i]);
+                resN[i].ShouldBe(amps[i]);
             }
 
-            var resN = Fourier.NBit(amps);
-            for (int i = 0; i < amps.Length; i++)
+            var fourier = Fourier.FourierTransform(2);
+            var resTwo = fourier.Transform(new MultiQubit(amps)).ToArray();
+            for (int i = 0; i < expected.Length; i++)
             {
-                resN[i].ShouldBe(expected[i]);
+                resTwo[i].ShouldBe(expected[i]);
             }
         }
 
@@ -181,16 +186,19 @@ namespace HelloQuantumTests
                 new Complex(-2, 0)
             };
 
-            var res = Fourier.TwoBit(amps);
-            for (int i = 0; i < amps.Length; i++)
-            {
-                res[i].ShouldBe(expected[i]);
-            }
+            var fourier = Fourier.FourierTransform(2);
+            var inverseFourier = fourier.Inverse();
 
-            var resN = Fourier.NBit(amps);
-            for (int i = 0; i < amps.Length; i++)
+            var resN = inverseFourier.Transform(new MultiQubit(expected)).ToArray();
+            for (int i = 0; i < expected.Length; i++)
             {
-                resN[i].ShouldBe(expected[i]);
+                resN[i].ShouldBe(amps[i]);
+            }
+            
+            var resTwo = fourier.Transform(new MultiQubit(amps)).ToArray();
+            for (int i = 0; i < expected.Length; i++)
+            {
+                resTwo[i].ShouldBe(expected[i]);
             }
         }
 
@@ -236,10 +244,19 @@ namespace HelloQuantumTests
                 new Complex(0.115485,0.279830)
             };
 
-            var resN = Fourier.NBit(amps);
-            for (int i = 0; i < amps.Length; i++)
+            var fourier = Fourier.FourierTransform(4);
+            var inverseFourier = fourier.Inverse();
+
+            var resN = inverseFourier.Transform(new MultiQubit(expected)).ToArray();
+            for (int i = 0; i < expected.Length; i++)
             {
-                resN[i].ShouldBe(expected[i]);
+                resN[i].ShouldBe(amps[i]);
+            }
+            
+            var resTwo = fourier.Transform(new MultiQubit(amps)).ToArray();
+            for (int i = 0; i < expected.Length; i++)
+            {
+                resTwo[i].ShouldBe(expected[i]);
             }
         }
 
@@ -318,95 +335,21 @@ namespace HelloQuantumTests
                 new Complex(3.695521,8.016002)
             };
 
-            var resN = Fourier.NBit(amps);
-            for (int i = 0; i < amps.Length; i++)
-            {
-                resN[i].ShouldBe(expected[i]);
-            }
-        }
+            var fourier = Fourier.FourierTransform(5);
+            var inverseFourier = fourier.Inverse();
 
-        [Fact]
-        public void FiveBitFourierInverse()
-        {
-            var expected = new[]
-            {
-                new Complex(38.000000,35.000000),
-                new Complex(-17.895443,25.543153),
-                new Complex(3.847761,6.477280),
-                new Complex(-9.216936,13.129740),
-                new Complex(2.585792,4.414208),
-                new Complex(-8.247788,9.218005),
-                new Complex(4.765361,-3.090400),
-                new Complex(8.488227,13.216451),
-                new Complex(-17.000000,9.000000),
-                new Complex(-8.026356,-5.652166),
-                new Complex(1.234634,-3.090400),
-                new Complex(3.132755,-0.750147),
-                new Complex(5.414208,1.414208),
-                new Complex(-3.326046,4.413894),
-                new Complex(2.152240,6.477280),
-                new Complex(-7.630089,1.724720),
-                new Complex(-6.000000,-13.000000),
-                new Complex(11.824688,-4.481880),
-                new Complex(-1.847757,8.008001),
-                new Complex(-1.505026,-1.969436),
-                new Complex(5.414208,-1.414208),
-                new Complex(-3.610213,1.299210),
-                new Complex(3.234639,0.605119),
-                new Complex(-0.695021,-2.991710),
-                new Complex(-0.000000,-11.000000),
-                new Complex(11.140004,-2.684233),
-                new Complex(2.765362,0.605119),
-                new Complex(8.318391,-2.114216),
-                new Complex(2.585792,1.585792),
-                new Complex(13.641154,-7.155982),
-                new Complex(5.847760,8.008001),
-                new Complex(24.607698,-22.745403)
-            };
-
-            var amps = new[]
-            {
-                new Complex(73.999999,68.000000),
-                new Complex(128.000004,128.000001),
-                new Complex(96.000002,95.999999),
-                new Complex(64.000035,64.000002),
-                new Complex(32.000000,32.000000),
-                new Complex(128.000002,128.000001),
-                new Complex(95.999999,0.000002),
-                new Complex(0.000093,63.999999),
-                new Complex(32.000002,31.999999),
-                new Complex(127.999996,128.000000),
-                new Complex(96.000001,0.000003),
-                new Complex(63.999840,63.999999),
-                new Complex(-0.000000,32.000001),
-                new Complex(128.000001,128.000000),
-                new Complex(96.000001,95.999999),
-                new Complex(64.000033,64.000000),
-                new Complex(32.000001,32.000000),
-                new Complex(3.695520,8.954560),
-                new Complex(-0.828418,2.828415),
-                new Complex(1.530718,-14.180803),
-                new Complex(-34.000000,16.000000),
-                new Complex(-1.530721,-10.180801),
-                new Complex(4.828417,2.828416),
-                new Complex(-3.695522,4.954561),
-                new Complex(-14.000002,-27.999999),
-                new Complex(-3.695521,12.016002),
-                new Complex(4.828415,-2.828416),
-                new Complex(-1.530718,-6.789762),
-                new Complex(-2.000000,-24.000001),
-                new Complex(1.530718,-2.789762),
-                new Complex(-0.828417,-2.828417),
-                new Complex(3.695521,8.016002)
-            };
-
-            var inverseFourier = Fourier.FourierTransform(5).Inverse();
             var resN = inverseFourier.Transform(new MultiQubit(expected)).ToArray();
             for (int i = 0; i < expected.Length; i++)
             {
                 resN[i].ShouldBe(amps[i]);
             }
-        }        
+            
+            var resTwo = fourier.Transform(new MultiQubit(amps)).ToArray();
+            for (int i = 0; i < expected.Length; i++)
+            {
+                resTwo[i].ShouldBe(expected[i]);
+            }
+        }   
 
         [Fact]
         public void PhaseStartSimpleTest()
@@ -525,6 +468,26 @@ namespace HelloQuantumTests
             res.TrueChance(3).Should().BeApproximately(0, ComplexAssertionExtensions.Precision); // 1/8 bit
             res.TrueChance(2).Should().BeApproximately(0, ComplexAssertionExtensions.Precision); // 1/4 bit
             res.TrueChance(1).Should().BeApproximately(1, ComplexAssertionExtensions.Precision); // 1/2 bit
+        }
+
+        [Fact]
+        public void FourierComplexity()
+        {
+            // complexity = n*(n+1) / 2
+            Fourier.FourierTransform(2, false).NumGates.Should().Be(3);
+            Fourier.FourierTransform(3, false).NumGates.Should().Be(6);
+            Fourier.FourierTransform(4, false).NumGates.Should().Be(10);
+            Fourier.FourierTransform(5, false).NumGates.Should().Be(15);
+        }
+
+        [Fact]
+        public void PhaseEstComplexity()
+        {
+            // complexity = (sum(2^n) from 0 to n) + n + n*(n+1) / 2
+            PhaseEstimator.GatePhaseEstimator(Gates.X, 2).NumGates.Should().Be(3 + 2 + 1 + 2);
+            PhaseEstimator.GatePhaseEstimator(Gates.X, 3).NumGates.Should().Be(6 + 3 + 1 + 2 + 4);
+            PhaseEstimator.GatePhaseEstimator(Gates.X, 4).NumGates.Should().Be(10 + 4 + 1 + 2 + 4 + 8);
+            PhaseEstimator.GatePhaseEstimator(Gates.X, 5).NumGates.Should().Be(15 + 5 + 1 + 2 + 4 + 8 + 16);
         }
     }
 }

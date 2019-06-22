@@ -8,63 +8,6 @@ namespace HelloQuantum
 {
     public static class Fourier
     {
-        public static Complex[] TwoBit(Complex[] amps)
-        {
-            if (amps.Length != 4)
-            {
-                throw new ArgumentOutOfRangeException(nameof(amps));
-            }
-
-            var qubits = new MultiQubit(amps);
-            qubits = qubits.ApplyGate(Gates.H, 0);
-            qubits = qubits.ApplyControlledGate(Gates.Phase(2), 1, 0);
-            qubits = qubits.ApplyGate(Gates.H, 1);
-
-            // post processing, scale and swaps
-            Gate scaleGate = Gates.I.Scale(ComplexExt.OneOverRootTwo);
-            qubits = qubits.ApplyGate(scaleGate, 0).ApplyGate(scaleGate, 1);
-            // this is how you swap two quibits
-            qubits = qubits.ApplyControlledGate(Gates.Not, 0, 1);
-            qubits = qubits.ApplyControlledGate(Gates.Not, 1, 0);
-            qubits = qubits.ApplyControlledGate(Gates.Not, 0, 1);
-
-            return qubits.ToArray();
-        }
-
-        public static Complex[] ThreeBit(Complex[] amps)
-        {
-            if (amps.Length != 8)
-            {
-                throw new ArgumentOutOfRangeException(nameof(amps));
-            }
-
-            var qubits = new MultiQubit(amps);
-            qubits = qubits.ApplyGate(Gates.H, 0);
-            qubits = qubits.ApplyControlledGate(Gates.Phase(2), 1, 0);
-            qubits = qubits.ApplyControlledGate(Gates.Phase(3), 2, 0);
-            qubits = qubits.ApplyGate(Gates.H, 1);
-            qubits = qubits.ApplyControlledGate(Gates.Phase(2), 2, 1);
-            qubits = qubits.ApplyGate(Gates.H, 2);
-
-            // post processing, scale and swaps
-            Gate scaleGate = Gates.I.Scale(ComplexExt.OneOverRootTwo);
-            qubits = qubits.ApplyGate(scaleGate, 0).ApplyGate(scaleGate, 1).ApplyGate(scaleGate, 2);
-            // this is how you swap two quibits
-            qubits = qubits.ApplyControlledGate(Gates.Not, 0, 2);
-            qubits = qubits.ApplyControlledGate(Gates.Not, 2, 0);
-            qubits = qubits.ApplyControlledGate(Gates.Not, 0, 2);
-
-            return qubits.ToArray();
-        }
-
-        public static Complex[] NBit(Complex[] amps)
-        {
-            int n = (int)Math.Log(amps.LongLength, 2);
-
-            var qubits = new MultiQubit(amps);
-            return FourierTransform(n).Transform(qubits).ToArray();
-        }
-
         public static IUnitaryTransform FourierTransform(int numQubits, bool scaleAndSwap = true)
         {
             var fourier = new CompositeTransform(new IdentityTransform(numQubits));

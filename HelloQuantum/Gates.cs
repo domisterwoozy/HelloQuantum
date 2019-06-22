@@ -20,6 +20,8 @@ namespace HelloQuantum
         int NumQubits { get; }
         IQuantumState Transform(IQuantumState input);
         IUnitaryTransform Inverse();
+
+        int NumGates { get; }
     }
 
     /// <summary>
@@ -34,6 +36,7 @@ namespace HelloQuantum
 
         public long Dimension => 2;
         public int NumQubits => 1;
+        public int NumGates => 1;
 
         public Gate(Complex a, Complex b, Complex c, Complex d)
         {
@@ -61,42 +64,47 @@ namespace HelloQuantum
         IUnitaryTransform IUnitaryTransform.Inverse() => Inverse();
     }
 
-    public struct CGate : IUnitaryTransform
+    public struct CTransform : IUnitaryTransform
     {
-        public Gate Gate { get; }
+        public IUnitaryTransform InnerTransform { get; }
 
-        public long Dimension => 4;
-        public int NumQubits => 2;
+        public long Dimension => 2 * InnerTransform.Dimension;
+        public int NumQubits => 1 + InnerTransform.NumGates;
+        public int NumGates => 1; // i think this is considered a basic gate
 
-        public CGate(Gate g)
+        public CTransform(IUnitaryTransform innerTransform)
         {
-            Gate = g;
-        }
-
-        public MultiQubit Transform(Qubit control, Qubit target)
-        {
-            var init = new MultiQubit(control, target);
-            return (MultiQubit)Transform(init);
+            InnerTransform = innerTransform;
         }
 
         public IQuantumState Transform(IQuantumState input)
         {
-            if (input.Dimension != 4)
+            if (input.Dimension != 2 * InnerTransform.Dimension)
             {
-                //throw new ArgumentException(nameof(input));
+                throw new ArgumentException(nameof(input));
+            }           
+
+            var firstHalf = new Complex[Dimension / 2];
+            var secHalf = new Complex[Dimension / 2];
+            for (long i = 0; i < Dimension; i++)
+            {
+                // first half of vector is just copied over as an identity
+                if (i < Dimension / 2)
+                {
+                    firstHalf[i] = input.GetAmplitude(new ComputationalBasis(i, NumQubits)); 
+                }
+                else
+                {
+                    secHalf[i - (Dimension / 2)] = input.GetAmplitude(new ComputationalBasis(i, NumQubits));
+                }
             }
 
-            return new MultiQubit(new[]
-            {
-                input.GetAmplitude("00".ToBits()),
-                input.GetAmplitude("01".ToBits()),
-                input.GetAmplitude("10".ToBits()) * Gate.A + input.GetAmplitude("11".ToBits()) * Gate.B,
-                input.GetAmplitude("10".ToBits()) * Gate.C + input.GetAmplitude("11".ToBits()) * Gate.D,
-            });
+            var transformedSecHalf = InnerTransform.Transform(new MultiQubit(secHalf));
+
+            return new MultiQubit(firstHalf.Concat(transformedSecHalf).ToArray());
         }
 
-        // I have no idea if this is right
-        public IUnitaryTransform Inverse() => new CGate(Gate.Inverse());
+        public IUnitaryTransform Inverse() => new CTransform(InnerTransform.Inverse());
     }
 
     public static class Gates
@@ -129,6 +137,9 @@ namespace HelloQuantum
         public long Dimension { get; }
         public int NumQubits { get; }
 
+        // it takes nothing to do nothing
+        public int NumGates => 0;
+
         public IdentityTransform(int numQubits)
         {
             NumQubits = numQubits;
@@ -140,10 +151,10 @@ namespace HelloQuantum
     }
 
     public class MultiGate : IUnitaryTransform
-    {       
+    {
         public long Dimension { get; }
-
-        public int NumQubits => throw new NotImplementedException();
+        public int NumQubits { get; }
+        public int NumGates { get; }
 
         private readonly Complex[,] elements;
 
@@ -167,7 +178,7 @@ namespace HelloQuantum
         {
             long bigN = (long)Math.Pow(2, dim);
             var eles = new Complex[bigN, bigN];
-            for(long i = 0; i < bigN; i++)
+            for (long i = 0; i < bigN; i++)
             {
                 eles[i, i] = 1;
             }
@@ -200,6 +211,8 @@ namespace HelloQuantum
 
         public long Dimension { get; }
         public int NumQubits { get; }
+
+        public int NumGates => transform.NumGates;
 
         public PartialTransform(long dimension, IUnitaryTransform transform, int[] applyToQubitIndexes)
         {
@@ -269,6 +282,8 @@ namespace HelloQuantum
         public long Dimension => transforms.Select(t => t.Dimension).Distinct().Single();
         public int NumQubits => transforms.Select(t => t.NumQubits).Distinct().Single();
 
+        public int NumGates => transforms.Sum(t => t.NumGates);
+
         public CompositeTransform(params IUnitaryTransform[] transforms)
         {
             this.transforms = transforms.ToImmutableList();
@@ -291,9 +306,18 @@ namespace HelloQuantum
         public CompositeTransform Apply(Gate g, int qubitIndex)
             => new CompositeTransform(transforms.Add(new PartialTransform(Dimension, g, new[] { qubitIndex })));
 
-        public CompositeTransform ApplyControlled(Gate g, int controlIndex, int targetIndex)
+        public CompositeTransform Apply(IUnitaryTransform g, int[] qubitIndexes)
+            => new CompositeTransform(transforms.Add(new PartialTransform(Dimension, g, qubitIndexes)));
+
+        public CompositeTransform ApplyControlled(IUnitaryTransform g, int controlIndex, int targetIndex)
+            => ApplyControlled(g, controlIndex, new[] { targetIndex });
+
+        public CompositeTransform ApplyControlled(IUnitaryTransform g, int controlIndex, int[] targetIndexes)
             => new CompositeTransform(
-                transforms.Add(new PartialTransform(Dimension, new CGate(g), new[] { controlIndex, targetIndex })));
+                transforms.Add(new PartialTransform(
+                    Dimension,
+                    new CTransform(g), 
+                    new[] { controlIndex }.Concat(targetIndexes).ToArray())));
     }
 
 }
