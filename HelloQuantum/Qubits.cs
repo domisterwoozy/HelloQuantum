@@ -17,6 +17,56 @@ namespace HelloQuantum
         Complex GetAmplitude(ComputationalBasis basis);
 
         double TrueChance(int qubitIndex);
+
+        /// <summary>
+        /// The chance a certain configuration of qubits occurs
+        /// </summary>
+        double Chance(params (int qubitIndex, bool isOn)[] ps);
+    }
+
+    public static class QuantumStateExt
+    {
+        public static int NumQubits(this IQuantumState state) => (int)Math.Log(state.Dimension, 2);
+
+        public class Register
+        {
+            public IEnumerable<int> QubitIndexes { get; set; }
+        }
+
+        public static string Print(this IQuantumState state, params Register[] registers)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (long i = 0; i < state.Dimension; i++)
+            {
+                var basis = new ComputationalBasis(i, state.NumQubits());
+                var amp = state.GetAmplitude(basis);
+                if (amp == Complex.Zero)
+                {
+                    continue;
+                }
+                sb.Append($"+{(amp.Imaginary == 0 ? amp.Real.ToString("F2") : amp.ToString("F2"))}");
+
+                var labels = basis.GetLabels();                
+                foreach (var register in registers)
+                {
+                    var registerLabels = new List<bool>();
+                    foreach (var index in register.QubitIndexes)
+                    {
+                        registerLabels.Add(labels[index]);
+                    }
+                    long regValue = ComputationalBasis.FromLabels(registerLabels.ToArray()).AmpIndex;
+                    sb.Append($"|{regValue}>");
+                }
+            }
+            return sb.ToString();
+        }
+
+        public static string Print(this IQuantumState state) => state.Print(
+            Enumerable.Range(0, state.NumQubits())
+            .Select(i => new Register
+            {
+                QubitIndexes = new[] { i }
+            }).ToArray());
     }
 
     public struct Qubit : IQuantumState
@@ -61,6 +111,15 @@ namespace HelloQuantum
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         public double TrueChance(int qubitIndex) => (AmpOne * AmpOne).Magnitude;
+
+        public double Chance(params (int qubitIndex, bool isOn)[] ps)
+        {
+            if (ps.Length != 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(ps));
+            }
+            return ps.Single().isOn ? TrueChance(0) : 1 - TrueChance(0);
+        }
     }
 
     public struct ComputationalBasis
@@ -124,6 +183,41 @@ namespace HelloQuantum
             }
         }
 
+        public static MultiQubit BasisVector(long ampIndex, int numQubits)
+        {
+            var amps = new Complex[(long)Math.Pow(2, numQubits)];
+            amps[ampIndex] = 1;
+            return new MultiQubit(amps);
+        }
+
+        /// <summary>
+        /// Tensor products two registers into one big quantum state.
+        /// </summary>
+        public MultiQubit(MultiQubit a, MultiQubit b)
+        {
+            NumQubits = a.NumQubits + b.NumQubits;
+
+            amps = new Complex[a.Dimension * b.Dimension];
+
+            for (long ia = 0; ia < a.Dimension; ia++)
+            {
+                bool[] aLabels = new ComputationalBasis(ia, a.NumQubits).GetLabels();
+
+                for (long ib = 0; ib < b.Dimension; ib++)
+                {
+                    bool[] bLabels = new ComputationalBasis(ib, b.NumQubits).GetLabels();
+
+                    var finalIndex = ComputationalBasis.FromLabels(aLabels.Concat(bLabels).ToArray());
+                    amps[finalIndex.AmpIndex] = a.GetAmplitude(aLabels) * b.GetAmplitude(bLabels);
+                }
+            }
+
+            if (!amps.IsNormalized())
+            {
+                //throw new InvalidOperationException("Big booboo");
+            }
+        }
+
         public MultiQubit(Complex[] amps)
         {
             if (!amps.IsNormalized())
@@ -163,6 +257,31 @@ namespace HelloQuantum
             return res;
         }
 
+        public double Chance(params (int qubitIndex, bool isOn)[] ps)
+        {
+            double res = 0;
+            for (long i = 0; i < amps.LongLength; i++)
+            {
+                bool shortCircuit = false;
+                bool[] lables = new ComputationalBasis(i, NumQubits).GetLabels();
+                foreach (var (qubitIndex, isOn) in ps)
+                {
+                    if (lables[qubitIndex] != isOn)
+                    {
+                        shortCircuit = true;
+                        break;
+                    }
+                }
+                if (shortCircuit)
+                {
+                    continue;
+                }
+
+                res += (amps[i] * amps[i]).Magnitude;
+            }
+            return res;
+        }
+
         public MultiQubit CollapseQubit(int qubitIndex, bool classicalValue)
         {
             Complex[] newAmps = new Complex[amps.LongLength];
@@ -192,7 +311,5 @@ namespace HelloQuantum
         }
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-        
     }
 }

@@ -82,5 +82,10 @@ namespace HelloQuantum
             // need to pad with zeros to get the correct number of labels
             return new bool[padLength - bits.Length].Concat(bits).ToArray();
         }
+
+        /// <summary>
+        /// The minimum number of bits required to represent this number
+        /// </summary>
+        public static int BitsCeiling(this long n) => (int)Math.Ceiling(Math.Log(n, 2));
     }
 }

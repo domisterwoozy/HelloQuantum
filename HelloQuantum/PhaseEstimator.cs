@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using static HelloQuantum.QuantumStateExt;
 
 namespace HelloQuantum
 {
@@ -10,17 +11,22 @@ namespace HelloQuantum
         public static CompositeTransform GatePhaseEstimatorStart(IUnitaryTransform u, int t)
         {
             var phaseEstimator = new CompositeTransform(new IdentityTransform(u.NumQubits + t));
+
             foreach (int ti in Enumerable.Range(0, t))
             {
                 phaseEstimator = phaseEstimator.Apply(Gates.H, u.NumQubits + ti);
+            }
+
+            foreach (int ti in Enumerable.Range(0, t))
+            {
                 // apply u 2^(ti) times
                 long j = (long)Math.Pow(2, ti);
                 phaseEstimator = phaseEstimator.ApplyControlled(
-                    u, 
-                    u.NumQubits + ti, 
+                    u,
+                    u.NumQubits + ti,
                     Enumerable.Range(0, u.NumQubits).ToArray(),
                     j);
-        }
+            }
 
             return phaseEstimator;
         }

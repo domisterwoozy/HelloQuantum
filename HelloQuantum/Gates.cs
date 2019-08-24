@@ -29,7 +29,7 @@ namespace HelloQuantum
         int NumGates { get; }
 
         /// <summary>
-        /// Some transforms have short cuts when repeatadly applying them.
+        /// Some transforms have shortcuts when repeatadly applying them.
         /// This allows overriding the default which is just repeated application.
         /// </summary>
         IUnitaryTransform Pow(long exponent)
@@ -82,7 +82,7 @@ namespace HelloQuantum
         public IUnitaryTransform InnerTransform { get; }
 
         public long Dimension => 2 * InnerTransform.Dimension;
-        public int NumQubits => 1 + InnerTransform.NumGates;
+        public int NumQubits => 1 + InnerTransform.NumQubits;
         public int NumGates => InnerTransform.NumGates; // i think this is considered a basic gate
 
         public CTransform(IUnitaryTransform innerTransform)
@@ -118,6 +118,9 @@ namespace HelloQuantum
         }
 
         public IUnitaryTransform Inverse() => new CTransform(InnerTransform.Inverse());
+
+        public IUnitaryTransform Pow(long exp)
+            => new CTransform(InnerTransform.Pow(exp));
     }
 
     public static class Gates
@@ -163,6 +166,34 @@ namespace HelloQuantum
         public IQuantumState Transform(IQuantumState input) => input;
     }
 
+    /// <summary>
+    /// A fake transform that just causes a callback to occur.
+    /// </summary>
+    public class ActionTransform : IUnitaryTransform
+    {
+        private readonly Action<IQuantumState> action;
+
+        public long Dimension { get; }
+        public int NumQubits { get; }
+
+        // it takes nothing to do nothing
+        public int NumGates => 0;
+
+        public ActionTransform(int numQubits, Action<IQuantumState> action)
+        {
+            NumQubits = numQubits;
+            this.action = action;
+            Dimension = (long)Math.Pow(2, NumQubits);
+        }
+
+        public IUnitaryTransform Inverse() => this;
+        public IQuantumState Transform(IQuantumState input)
+        {
+            action(input);
+            return input;
+        }
+    }
+
     public class MultiGate : IUnitaryTransform
     {
         public long Dimension { get; }
@@ -172,7 +203,10 @@ namespace HelloQuantum
 
         private readonly Matrix<Complex> matrix;
 
-        public MultiGate(Complex[,] elements, int numGates)
+        // optional way to pow func
+        private readonly Func<long, IUnitaryTransform> powFunc;
+
+        public MultiGate(Complex[,] elements, int numGates, Func<long, IUnitaryTransform> powFunc = null)
         {
             if (elements.GetLongLength(0) != elements.GetLongLength(1))
             {
@@ -185,8 +219,10 @@ namespace HelloQuantum
             }
 
             Dimension = elements.GetLongLength(0);
+            NumQubits = (int)Math.Log(Dimension, 2);
             matrix = DenseMatrix.OfArray(elements);
             NumGates = numGates;
+            this.powFunc = powFunc;
         }
 
         public IQuantumState Transform(IQuantumState input)
@@ -202,6 +238,15 @@ namespace HelloQuantum
         }
 
         public IUnitaryTransform Inverse() => new MultiGate(matrix.Inverse().ToArray(), NumGates);
+
+        public IUnitaryTransform Pow(long exp)
+        {
+            if (powFunc == null)
+            {
+                return ((IUnitaryTransform)this).Pow(exp);
+            }
+            return powFunc(exp);
+        }
     }
 
     /// <summary>
@@ -276,6 +321,9 @@ namespace HelloQuantum
 
         public IUnitaryTransform Inverse()
             => new PartialTransform(Dimension, transform.Inverse(), applyToQubitIndexes);
+
+        public IUnitaryTransform Pow(long exp)
+            => new PartialTransform(Dimension, transform.Pow(exp), applyToQubitIndexes);
     }
 
     public class CompositeTransform : IUnitaryTransform
@@ -298,7 +346,11 @@ namespace HelloQuantum
         }
 
         public IQuantumState Transform(IQuantumState input)
-            => transforms.Aggregate(input, (accum, next) => next.Transform(accum));
+            => transforms.Aggregate(input, (accum, next) =>
+            {
+                string test = accum.Print();
+                return next.Transform(accum);
+            });
 
         public IUnitaryTransform Inverse()
             => new CompositeTransform(transforms.Reverse().Select(t => t.Inverse()).ToArray());

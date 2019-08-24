@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using System.Numerics;
 using Xunit;
+using static HelloQuantum.QuantumStateExt;
 
 namespace HelloQuantumTests
 {
@@ -21,6 +22,34 @@ namespace HelloQuantumTests
 
     public class BasicTests
     {
+        [Fact]
+        public void BellPrintTest()
+        {
+            Qubit control = new Qubit(ComplexExt.OneOverRootTwo, ComplexExt.OneOverRootTwo);
+            Qubit target = new Qubit(1, 0);
+            IQuantumState bell = new CTransform(Gates.Not).Transform(new MultiQubit(control, target));
+            bell.Print().Should().Be("+0.71|0>|0>+0.71|1>|1>");
+        }
+
+        [Fact]
+        public void TensorPrintTest()
+        {
+            var state = MultiQubit.BasisVector(14, 8);
+            var stateOther = MultiQubit.BasisVector(5, 4);
+            var compState = new MultiQubit(state, stateOther);
+            compState.Print(new[]
+            {
+                new Register
+                {
+                    QubitIndexes = new[]{1,2,3,4,5,6,7}
+                },
+                new Register
+                {
+                    QubitIndexes = new[]{8,9,10,11}
+                }
+            }).Should().Be("+1.00|14>|5>");
+        }
+
         [Fact]
         public void ComplexTests()
         {
