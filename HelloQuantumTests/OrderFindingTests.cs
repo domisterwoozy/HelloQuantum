@@ -170,7 +170,7 @@ namespace HelloQuantumTests
             // with a denominator of r = 2
             // in this case 0 and 32 over 2^6 equal 0 and 1/2
             // therefore answer is 2
-            outStr.Should().Be("+0.50|0>|1>+0.50|0>|2>+0.50|32>|1>-0.50|32>|2>");
+            outStr.Should().Be("+0.50|0>|1>+0.50|0>|2>+0.50|32>|1>+-0.50|32>|2>");
         }
     }
 }
