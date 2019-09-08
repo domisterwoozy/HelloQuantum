@@ -14,6 +14,8 @@ namespace HelloQuantum
 
     public static class ComplexExt
     {
+        public const double Precision = 0.00000001;
+
         public static readonly Complex OneOverRootTwo = new Complex(1 / Math.Sqrt(2), 0);
 
         public static IEnumerable<Complex> Normalize(this IEnumerable<Complex> nums)

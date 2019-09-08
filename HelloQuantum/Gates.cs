@@ -32,8 +32,7 @@ namespace HelloQuantum
         /// Some transforms have shortcuts when repeatadly applying them.
         /// This allows overriding the default which is just repeated application.
         /// </summary>
-        IUnitaryTransform Pow(long exponent)
-            => new CompositeTransform(LongExt.Range(0, exponent).Select(exp => this).ToArray());
+        IUnitaryTransform Pow(long exponent);
         
     }
 
@@ -75,6 +74,12 @@ namespace HelloQuantum
             .Scale(1 / (A * D - B * C).Magnitude); // need to take inverse of the scale incase were not unitary
 
         IUnitaryTransform IUnitaryTransform.Inverse() => Inverse();
+
+        public IUnitaryTransform Pow(long exponent)
+        {
+            IUnitaryTransform wtf = this;
+            return new CompositeTransform(LongExt.Range(0, exponent).Select(exp => wtf).ToArray());
+        }           
     }
 
     public struct CTransform : IUnitaryTransform
@@ -164,34 +169,8 @@ namespace HelloQuantum
 
         public IUnitaryTransform Inverse() => this;
         public IQuantumState Transform(IQuantumState input) => input;
-    }
 
-    /// <summary>
-    /// A fake transform that just causes a callback to occur.
-    /// </summary>
-    public class ActionTransform : IUnitaryTransform
-    {
-        private readonly Action<IQuantumState> action;
-
-        public long Dimension { get; }
-        public int NumQubits { get; }
-
-        // it takes nothing to do nothing
-        public int NumGates => 0;
-
-        public ActionTransform(int numQubits, Action<IQuantumState> action)
-        {
-            NumQubits = numQubits;
-            this.action = action;
-            Dimension = (long)Math.Pow(2, NumQubits);
-        }
-
-        public IUnitaryTransform Inverse() => this;
-        public IQuantumState Transform(IQuantumState input)
-        {
-            action(input);
-            return input;
-        }
+        public IUnitaryTransform Pow(long exponent) => this;
     }
 
     public class MultiGate : IUnitaryTransform
@@ -348,7 +327,6 @@ namespace HelloQuantum
         public IQuantumState Transform(IQuantumState input)
             => transforms.Aggregate(input, (accum, next) =>
             {
-                string test = accum.Print();
                 return next.Transform(accum);
             });
 
@@ -381,6 +359,9 @@ namespace HelloQuantum
                     new[] { controlIndex }.Concat(targetIndexes).ToArray());
             return new CompositeTransform(transforms.Add(newTrans.Pow(exp)));
         }
+
+        public IUnitaryTransform Pow(long exponent) => 
+           new CompositeTransform(LongExt.Range(0, exponent).Select(exp => this).ToArray());
     }
 
 }

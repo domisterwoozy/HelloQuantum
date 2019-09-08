@@ -8,7 +8,7 @@ namespace HelloQuantum
 {
     public static class Fourier
     {
-        public static IUnitaryTransform FourierTransform(int numQubits, bool scaleAndSwap = true)
+        public static IUnitaryTransform FourierTransform(int numQubits, bool scale = true, bool swap = true)
         {
             var fourier = new CompositeTransform(new IdentityTransform(numQubits));
             for (int bitIndex = 0; bitIndex < numQubits; bitIndex++)
@@ -26,7 +26,7 @@ namespace HelloQuantum
                 }
             }
 
-            if (scaleAndSwap)
+            if (scale)
             {
                 // scale time
                 Gate scaleGate = Gates.I.Scale(ComplexExt.OneOverRootTwo);
@@ -34,7 +34,10 @@ namespace HelloQuantum
                 {
                     fourier = fourier.Apply(scaleGate, bitIndex);
                 }
+            }
 
+            if (swap)
+            { 
                 // swap time
                 // i think we just swap everything?
                 for (int bitIndex = 0; bitIndex < numQubits / 2; bitIndex++)

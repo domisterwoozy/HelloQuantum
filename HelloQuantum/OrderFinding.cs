@@ -46,20 +46,24 @@ namespace HelloQuantum
         }
     }
 
+    /// <summary>
+    /// for an x and N, find r such that
+    /// x^r = 1 (mod N)
+    /// </summary>
     public static class OrderFindingTransform
     {
         public static int GetPercision(long n, double failChance = 0.45) 
             => 2 * n.BitsCeiling() + 1 + (int)Math.Log(2 + 1 / (2 * failChance), 2);
 
-        public static IEnumerable<Register> Registers(int l, int t) => new[]
+        public static IEnumerable<Register> Registers(int t, int l) => new[]
         {
             new Register
             {
-                QubitIndexes = Enumerable.Range(0, l)
+                QubitIndexes = Enumerable.Range(0, t)
             },
             new Register
             {
-                QubitIndexes = Enumerable.Range(l, t)
+                QubitIndexes = Enumerable.Range(t, l)
             }           
         };
 
@@ -77,8 +81,6 @@ namespace HelloQuantum
         /// <summary>
         /// Register 1: first L qubits - pass in |1> (first basis vector)
         /// Register 2: last t qubits - pass in all zeros (i think N = 2^L)
-        /// 
-        /// Solves for r where x^r = 1 (mod n)
         /// </summary>
         public static IUnitaryTransform GetStart(long x, long n, int t)
         {

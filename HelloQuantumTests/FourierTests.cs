@@ -15,10 +15,10 @@ namespace HelloQuantumTests
         public void FourierComplexity()
         {
             // complexity = n*(n+1) / 2
-            Fourier.FourierTransform(2, false).NumGates.Should().Be(3);
-            Fourier.FourierTransform(3, false).NumGates.Should().Be(6);
-            Fourier.FourierTransform(4, false).NumGates.Should().Be(10);
-            Fourier.FourierTransform(5, false).NumGates.Should().Be(15);
+            Fourier.FourierTransform(2, false, false).NumGates.Should().Be(3);
+            Fourier.FourierTransform(3, false, false).NumGates.Should().Be(6);
+            Fourier.FourierTransform(4, false, false).NumGates.Should().Be(10);
+            Fourier.FourierTransform(5, false, false).NumGates.Should().Be(15);
         }
 
         [Fact]

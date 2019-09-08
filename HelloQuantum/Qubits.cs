@@ -35,12 +35,13 @@ namespace HelloQuantum
 
         public static string Print(this IQuantumState state, params Register[] registers)
         {
+            var test = state.ToArray().Where(b => b.Magnitude > ComplexExt.Precision);
             StringBuilder sb = new StringBuilder();
             for (long i = 0; i < state.Dimension; i++)
             {
                 var basis = new ComputationalBasis(i, state.NumQubits());
                 var amp = state.GetAmplitude(basis);
-                if (amp == Complex.Zero)
+                if (amp.Magnitude < ComplexExt.Precision)
                 {
                     continue;
                 }

@@ -6,16 +6,27 @@ using static HelloQuantum.QuantumStateExt;
 
 namespace HelloQuantum
 {
+    /// <summary>
+    /// Has two registers. Register 1 has t qubits. Register 2 has l qubits.
+    /// Both are in descending significance order
+    /// </summary>
     public class PhaseEstimator
     {
-        public static CompositeTransform GatePhaseEstimatorStart(IUnitaryTransform u, int t)
+        public static CompositeTransform GetPhaseHadamar(int t, int l)
         {
-            var phaseEstimator = new CompositeTransform(new IdentityTransform(u.NumQubits + t));
+            var phaseEstimator = new CompositeTransform(new IdentityTransform(t + l));
 
             foreach (int ti in Enumerable.Range(0, t))
             {
-                phaseEstimator = phaseEstimator.Apply(Gates.H, u.NumQubits + ti);
+                phaseEstimator = phaseEstimator.Apply(Gates.H, ti);
             }
+
+            return phaseEstimator;
+        }
+
+        public static CompositeTransform GatePhaseEstimatorStart(IUnitaryTransform u, int t)
+        {
+            var phaseEstimator = GetPhaseHadamar(t, u.NumQubits);
 
             foreach (int ti in Enumerable.Range(0, t))
             {
@@ -23,8 +34,8 @@ namespace HelloQuantum
                 long j = (long)Math.Pow(2, ti);
                 phaseEstimator = phaseEstimator.ApplyControlled(
                     u,
-                    u.NumQubits + ti,
-                    Enumerable.Range(0, u.NumQubits).ToArray(),
+                    t - 1 - ti,
+                    Enumerable.Range(t, u.NumQubits).ToArray(),
                     j);
             }
 
@@ -45,8 +56,8 @@ namespace HelloQuantum
                 new PartialTransform(
                     totalDimension,
                     // phase trans assumes fourier does not do the swap and scales
-                    Fourier.FourierTransform(t, false).Inverse(),
-                    Enumerable.Range(u.NumQubits, t).ToArray()));
+                    Fourier.FourierTransform(t, false, true).Inverse(),
+                    Enumerable.Range(0, t).ToArray()));
         }
     }
 }
