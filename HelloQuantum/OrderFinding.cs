@@ -87,4 +87,71 @@ namespace HelloQuantum
             return PhaseEstimator.GatePhaseEstimatorStart(NumberTheoryTransforms.ModMult(x, n), t);
         }
     }
+
+    public static class FractionHelpers
+    {
+        public static IEnumerable<long> GetNumerators(long num, long denom)
+        {
+            if (denom == 0)
+            {
+                throw new ArgumentException(nameof(denom));
+            }
+
+            if (num == 0)
+            {
+                return new long[] { 0 };
+            }
+
+            if (num < denom)
+            {
+                return GetNumerators(denom, num);
+            }
+
+            long wholePart = num / denom;
+            long remainder = num % denom;
+
+            if (remainder == 0)
+            {
+                return new[] { wholePart };
+            }
+
+            return new[] { wholePart }.Concat(GetNumerators(denom, remainder));
+        }
+    }
+
+    public static class OrderFinder
+    {
+        public static long Calculate(long x, long n)
+        {
+            int l = n.BitsCeiling();
+            int t = OrderFindingTransform.GetPercision(n);
+
+            var regs = OrderFindingTransform.Registers(t, l).ToArray();
+
+            IUnitaryTransform orderfinder = OrderFindingTransform.Get(x, n, t);
+
+            var regTwo = MultiQubit.BasisVector(1, l);
+            var regOne = new MultiQubit(Enumerable.Range(0, t).Select(i => Qubit.ClassicZero).ToArray());
+            var input = new MultiQubit(regOne, regTwo);
+
+            long denom = (long)Math.Pow(2, t);
+            while (true)
+            {
+                QuantumSim sim = new QuantumSim(orderfinder, regs);
+                IDictionary<Register, long> res = sim.Simulate(input);
+                long regValue = res.First().Value;
+                // can't do anything if we get zero, cant reduce
+                if (regValue == 0)
+                {
+                    continue;
+                }
+                // is this correct?
+                long rCandidate = FractionHelpers.GetNumerators(regValue, denom).Last();
+                if ((long)Math.Pow(x, rCandidate) % n == 1)
+                {
+                    return rCandidate;
+                }
+            }
+        }
+    }
 }

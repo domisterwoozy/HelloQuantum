@@ -33,6 +33,39 @@ namespace HelloQuantum
             public IEnumerable<int> QubitIndexes { get; set; }
         }
 
+        /// <summary>
+        /// The probabilities of each possible register value indexed by that value.
+        /// </summary>
+        public static double[] GetDistribution(this IQuantumState state, Register reg)
+        {
+            int regSize = reg.QubitIndexes.Count();
+            long maxRegValue = (long)Math.Pow(2, regSize);
+
+            // probabilities indexed by register value
+            double[] regProbabilities = new double[maxRegValue];
+            // go through every probability
+            for (long i = 0; i < state.Dimension; i++)
+            {
+                var basis = new ComputationalBasis(i, state.NumQubits());
+                var amp = state.GetAmplitude(basis);
+                if (amp.Magnitude < ComplexExt.Precision)
+                {
+                    continue;
+                }
+
+                var labels = basis.GetLabels();
+                var registerLabels = new List<bool>();
+                foreach (var index in reg.QubitIndexes)
+                {
+                    registerLabels.Add(labels[index]);
+                }
+                long regValue = ComputationalBasis.FromLabels(registerLabels.ToArray()).AmpIndex;
+                regProbabilities[regValue] += amp.Magnitude * amp.Magnitude;
+            }
+
+            return regProbabilities;
+        }
+
         public static string Print(this IQuantumState state, params Register[] registers)
         {
             var test = state.ToArray().Where(b => b.Magnitude > ComplexExt.Precision);

@@ -172,5 +172,45 @@ namespace HelloQuantumTests
             // therefore answer is 2
             outStr.Should().Be("+0.50|0>|1>+0.50|0>|2>+0.50|32>|1>+-0.50|32>|2>");
         }
+
+        [Fact]
+        public void OrderFindSimTest()
+        {
+            long x = 2;
+            long n = 3;
+            int r = 2; // 2 ^ 2 = 3 + 1
+
+            int l = n.BitsCeiling();
+            int t = OrderFindingTransform.GetPercision(n);
+
+            var regs = OrderFindingTransform.Registers(t, l).ToArray();
+
+            IUnitaryTransform orderfinder = OrderFindingTransform.Get(x, n, t);
+
+            var regTwo = MultiQubit.BasisVector(1, l);
+            var regOne = new MultiQubit(Enumerable.Range(0, t).Select(i => Qubit.ClassicZero).ToArray());
+            var input = new MultiQubit(regOne, regTwo);
+
+            var sim = new QuantumSim(orderfinder, regs);
+            var res = sim.Simulate(input);
+
+            res.First().Value.Should().BeOneOf(0, 32);
+        }
+
+        [Fact]
+        public void OrderFindFinalTest()
+        {
+            OrderFinder.Calculate(2, 3).Should().Be(2);
+            OrderFinder.Calculate(3, 4).Should().Be(2);
+            //OrderFinder.Calculate(2, 5).Should().Be(4); wtf is this index oob stuff
+        }
+
+        [Fact]
+        public void FractionTests()
+        {
+            FractionHelpers.GetNumerators(415, 93).Should().BeEquivalentTo(new[] { 4, 2, 6, 7 });
+            FractionHelpers.GetNumerators(31, 13).Should().BeEquivalentTo(new[] { 2, 2, 1, 1, 2 });
+            FractionHelpers.GetNumerators(1536, 2048).Should().BeEquivalentTo(new[] { 1, 3 });
+        }
     }
 }
