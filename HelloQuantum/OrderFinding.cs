@@ -42,7 +42,7 @@ namespace HelloQuantum
             int numBits = n.BitsCeiling();            
             return FromFunction(y => modMult(y, 1), numBits, modMult);
 
-            long modMult(long y, long exp) => ((long)Math.Pow(x, exp) * y) % n;
+            long modMult(long y, long exp) => ((long)BigInteger.ModPow(x, exp, n) * y) % n;
         }
     }
 
@@ -90,7 +90,7 @@ namespace HelloQuantum
 
     public static class FractionHelpers
     {
-        public static IEnumerable<long> GetNumerators(long num, long denom)
+        public static IEnumerable<long> GetContinuedFractionCoeffs(long num, long denom)
         {
             if (denom == 0)
             {
@@ -104,7 +104,7 @@ namespace HelloQuantum
 
             if (num < denom)
             {
-                return GetNumerators(denom, num);
+                return new long[] { 0 }.Concat(GetContinuedFractionCoeffs(denom, num));
             }
 
             long wholePart = num / denom;
@@ -115,7 +115,40 @@ namespace HelloQuantum
                 return new[] { wholePart };
             }
 
-            return new[] { wholePart }.Concat(GetNumerators(denom, remainder));
+            return new[] { wholePart }.Concat(GetContinuedFractionCoeffs(denom, remainder));
+        }
+
+        /// <summary>
+        /// Converts a continued fraction coefficient sequence into a single
+        /// simplified fraction.
+        /// </summary>
+        public static (long num, long denom) GetFraction(IEnumerable<long> coeffs)
+        {
+            long currNum = coeffs.Last();
+            long currDenom = 1;
+
+            foreach (var next in coeffs.Reverse().Skip(1))
+            {
+                // do 1 / yourself than add next
+                long newDenom = currNum;
+                long newNum = currDenom;
+                newNum += next * newDenom;
+
+                currNum = newNum;
+                currDenom = newDenom;
+            }
+
+            return (currNum, currDenom);
+        }
+
+        /// <summary>
+        /// Gets a sequence of fractions that converge towards a specified fraction.
+        /// This sequence converges in logN steps
+        /// </summary>
+        public static IEnumerable<(long num, long denom)> GetContinuedFractionSequence(long num, long denom)
+        {
+            var coeffs = GetContinuedFractionCoeffs(num, denom).ToArray();
+            return Enumerable.Range(1, coeffs.Length).Select(i => GetFraction(coeffs.Take(i)));
         }
     }
 
@@ -145,11 +178,12 @@ namespace HelloQuantum
                 {
                     continue;
                 }
-                // is this correct?
-                long rCandidate = FractionHelpers.GetNumerators(regValue, denom).Last();
-                if ((long)Math.Pow(x, rCandidate) % n == 1)
+                foreach (var (_, rCandidate) in FractionHelpers.GetContinuedFractionSequence(regValue, denom))
                 {
-                    return rCandidate;
+                    if ((long)Math.Pow(x, rCandidate) % n == 1)
+                    {
+                        return rCandidate;
+                    }
                 }
             }
         }

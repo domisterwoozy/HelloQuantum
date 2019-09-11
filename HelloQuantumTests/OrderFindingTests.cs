@@ -202,15 +202,31 @@ namespace HelloQuantumTests
         {
             OrderFinder.Calculate(2, 3).Should().Be(2);
             OrderFinder.Calculate(3, 4).Should().Be(2);
-            //OrderFinder.Calculate(2, 5).Should().Be(4); wtf is this index oob stuff
+        }
+
+        [Fact]
+        public void OrderFindFinalLongTest()
+        {
+            OrderFinder.Calculate(2, 5).Should().Be(4);
         }
 
         [Fact]
         public void FractionTests()
         {
-            FractionHelpers.GetNumerators(415, 93).Should().BeEquivalentTo(new[] { 4, 2, 6, 7 });
-            FractionHelpers.GetNumerators(31, 13).Should().BeEquivalentTo(new[] { 2, 2, 1, 1, 2 });
-            FractionHelpers.GetNumerators(1536, 2048).Should().BeEquivalentTo(new[] { 1, 3 });
+            FractionHelpers.GetContinuedFractionCoeffs(415, 93).Should().BeEquivalentTo(new[] { 4, 2, 6, 7 });
+            FractionHelpers.GetContinuedFractionCoeffs(31, 13).Should().BeEquivalentTo(new[] { 2, 2, 1, 1, 2 });
+            FractionHelpers.GetContinuedFractionCoeffs(1536, 2048).Should().BeEquivalentTo(new[] { 0, 1, 3 });
+
+            FractionHelpers.GetContinuedFractionCoeffs(117, 500).Should().BeEquivalentTo(new[] { 0, 4, 3, 1, 1, 1, 10 });          
+        }
+
+        [Fact]
+        public void FractionTestTwo()
+        {
+            FractionHelpers.GetFraction(new long[] { 4, 3, 2 }).Should().Be((30, 7));
+
+            // on the way to 0.234 (117/ 500) we should get to 11/47
+            FractionHelpers.GetContinuedFractionSequence(117, 500).Should().Contain((11, 47));
         }
     }
 }
