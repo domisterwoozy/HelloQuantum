@@ -22,6 +22,8 @@ namespace HelloQuantum
 
         public IDictionary<Register, long> Simulate(IQuantumState input)
         {
+            DateTime start = DateTime.UtcNow;
+
             var res = transform.Transform(input);
 
             var ret = new Dictionary<Register, long>();
@@ -43,6 +45,8 @@ namespace HelloQuantum
 
             GatesProcessed += transform.NumGates;
 
+            Console.WriteLine($"Time elapsed: {DateTime.UtcNow - start}");
+            Console.WriteLine($"Gates processed: {transform.NumGates}");
             return ret;
         }
     }

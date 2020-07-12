@@ -121,10 +121,10 @@ namespace HelloQuantum
 
         public Qubit(Complex zero, Complex one)
         {
-            if (!new[] { zero, one }.IsNormalized())
-            {
-                //throw new InvalidOperationException("Big booboo");
-            }
+            //if (!new[] { zero, one }.IsNormalized())
+            //{
+            //    //throw new InvalidOperationException("Big booboo");
+            //}
 
             AmpOne = one;
             AmpZero = zero;
@@ -211,10 +211,10 @@ namespace HelloQuantum
                 amps[i] = amp;
             }
 
-            if (!amps.IsNormalized())
-            {
-                //throw new InvalidOperationException("Big booboo");
-            }
+            //if (!amps.IsNormalized())
+            //{
+            //    //throw new InvalidOperationException("Big booboo");
+            //}
         }
 
         public static MultiQubit BasisVector(long ampIndex, int numQubits)
@@ -246,18 +246,18 @@ namespace HelloQuantum
                 }
             }
 
-            if (!amps.IsNormalized())
-            {
-                //throw new InvalidOperationException("Big booboo");
-            }
+            //if (!amps.IsNormalized())
+            //{
+            //    //throw new InvalidOperationException("Big booboo");
+            //}
         }
 
         public MultiQubit(Complex[] amps)
         {
-            if (!amps.IsNormalized())
-            {
-                //throw new ArgumentException("Amplitudes must be normalized");
-            }
+            //if (!amps.IsNormalized())
+            //{
+            //    //throw new ArgumentException("Amplitudes must be normalized");
+            //}
 
             if (!amps.LongLength.IsPowerTwo())
             {

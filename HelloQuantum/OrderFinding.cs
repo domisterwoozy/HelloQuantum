@@ -181,7 +181,7 @@ namespace HelloQuantum
                 foreach (var (_, rCandidate) in FractionHelpers.GetContinuedFractionSequence(regValue, denom))
                 {
                     if ((long)Math.Pow(x, rCandidate) % n == 1)
-                    {
+                    {                        
                         return rCandidate;
                     }
                 }

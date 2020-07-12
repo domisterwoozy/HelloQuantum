@@ -220,6 +220,10 @@ namespace HelloQuantum
 
         public IUnitaryTransform Pow(long exp)
         {
+            if (exp == 1)
+            {
+                return this;
+            }
             if (powFunc == null)
             {
                 return ((IUnitaryTransform)this).Pow(exp);
@@ -309,19 +313,25 @@ namespace HelloQuantum
     {
         private readonly ImmutableList<IUnitaryTransform> transforms;
 
-        public long Dimension => transforms.Select(t => t.Dimension).Distinct().Single();
-        public int NumQubits => transforms.Select(t => t.NumQubits).Distinct().Single();
+        public long Dimension { get; }
+        public int NumQubits { get; }
 
-        public int NumGates => transforms.Sum(t => t.NumGates);
+        public int NumGates { get; }
 
         public CompositeTransform(params IUnitaryTransform[] transforms)
         {
             this.transforms = transforms.ToImmutableList();
+            Dimension = transforms.Select(t => t.Dimension).Distinct().Single();
+            NumQubits = transforms.Select(t => t.NumQubits).Distinct().Single();
+            NumGates = transforms.Sum(t => t.NumGates);
         }
 
         public CompositeTransform(ImmutableList<IUnitaryTransform> transforms)
         {
             this.transforms = transforms;
+            Dimension = transforms.Select(t => t.Dimension).Distinct().Single();
+            NumQubits = transforms.Select(t => t.NumQubits).Distinct().Single();
+            NumGates = transforms.Sum(t => t.NumGates);
         }
 
         public IQuantumState Transform(IQuantumState input)

@@ -10,7 +10,8 @@ namespace HelloQuantum
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            Console.WriteLine(OrderFinder.Calculate(2, 5));
+            Console.ReadKey();
         }
     }   
 }
